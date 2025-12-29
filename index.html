@@ -10,11 +10,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script> <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script> <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src='https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js'></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
         body { background-color: #f3f4f6; font-family: 'Inter', sans-serif; }
@@ -73,7 +73,7 @@
                         </div>
                         <div onclick="loadTool('clean-excel')" class="tool-card bg-white p-4 rounded-lg shadow cursor-pointer flex items-center space-x-4">
                             <div class="bg-indigo-100 p-3 rounded text-indigo-600">🧹</div>
-                            <div><h3 class="font-bold">Clean Excel</h3></div>
+                            <div><h3 class="font-bold">Clean Excel</h3><p class="text-xs text-gray-400">Remove accents/symbols</p></div>
                         </div>
                         <div onclick="loadTool('duplicate-remover')" class="tool-card bg-white p-4 rounded-lg shadow cursor-pointer flex items-center space-x-4">
                             <div class="bg-orange-100 p-3 rounded text-orange-600">📋</div>
@@ -82,6 +82,11 @@
                         <div onclick="loadTool('pdf-image-to-excel')" class="tool-card bg-white p-4 rounded-lg shadow cursor-pointer flex items-center space-x-4">
                             <div class="bg-purple-100 p-3 rounded text-purple-600">👁️</div>
                             <div><h3 class="font-bold">PDF/Img to Excel</h3></div>
+                        </div>
+                        
+                        <div onclick="loadTool('menu-fixer')" class="tool-card bg-white p-4 rounded-lg shadow cursor-pointer flex items-center space-x-4 border-l-4 border-pink-500">
+                            <div class="bg-pink-100 p-3 rounded text-pink-600">🍔</div>
+                            <div><h3 class="font-bold">Menu Fixer Pro</h3><p class="text-xs text-gray-400">Fix Spellings (Utapam, etc)</p></div>
                         </div>
                     </div>
                 </div>
@@ -139,6 +144,7 @@
                 </div>
                 <div id="success-msg" class="hidden">
                     <p class="text-green-600 font-bold text-lg mb-4">🎉 Process Complete!</p>
+                    <p id="success-details" class="text-sm text-gray-500 mb-4"></p>
                     <button id="download-btn" class="bg-indigo-600 text-white px-8 py-3 rounded-lg shadow hover:bg-indigo-700 font-bold transition">Download Result</button>
                 </div>
                 <p id="error-msg" class="text-red-500 mt-4 hidden"></p>
@@ -154,6 +160,37 @@
         let rawDupData = [];
         let activeDupFileName = "";
 
+        // --- MENU FIXER DATA & CONFIG ---
+        const forcedCorrections = {
+            "utapam": "Uttapam", "uttapam": "Uttapam", "muglai": "Mughlai", "mughlai": "Mughlai",
+            "schez": "Schezwan", "schz": "Schezwan", "schzwn": "Schezwan", "rot": "Roti",
+            "nan": "Naan", "nun": "Naan", "naa": "Naan", "naan": "Naan", "tika": "Tikka",
+            "tikka": "Tikka", "seek": "Seekh", "seekh": "Seekh", "agli": "Aglio", "aglio": "Aglio",
+            "piza": "Pizza", "pizaa": "Pizza", "pulaw": "Pulao", "pulao": "Pulao", "plao": "Pulao",
+            "zeera": "Jeera", "jeera": "Jeera", "kabab": "Kebab", "kebab": "Kebab",
+            "chkn": "Chicken", "chk": "Chicken", "pnr": "Paneer", "paner": "Paneer", "panner": "Paneer",
+            "btr": "Butter", "buttr": "Butter", "veg": "Veg", "vge": "Veg", "frd": "Fried",
+            "brgr": "Burger", "sndwch": "Sandwich", "sambar": "Sambhar", "sambhar": "Sambhar",
+            "kadai": "Kadhai", "kadhai": "Kadhai"
+        };
+
+        const dictionary = [
+            "Chicken", "Paneer", "Rice", "Dal", "Roti", "Naan", "Kulcha", "Paratha",
+            "Butter", "Cheese", "Cream", "Curd", "Yogurt", "Milk", "Mayo",
+            "Tikka", "Masala", "Makhani", "Kadhai", "Handi", "Tawa", "Bhuna", "Lababdar",
+            "Biryani", "Pulao", "Jeera", "Fried", "Schezwan", "Hakka", "Manchurian",
+            "Noodles", "Soup", "Salad", "Raita", "Papad", "Pickle", "Chutney",
+            "Pizza", "Pasta", "Burger", "Sandwich", "Fries", "Momos", "Roll", "Wrap",
+            "Aglio", "Olio", "Arrabiata", "Alfredo", "Pesto", "Lasagna", "Risotto",
+            "Uttapam", "Mughlai", "Sambhar", "Idli", "Dosa", "Vada", "Pav", "Bhaji",
+            "Coke", "Pepsi", "Soda", "Water", "Juice", "Shake", "Lassi", "Mojito",
+            "Aloo", "Gobi", "Matar", "Palak", "Methi", "Bhindi", "Corn", "Mushroom",
+            "Onion", "Tomato", "Garlic", "Ginger", "Chilli", "Capsicum",
+            "Sauteed", "Grilled", "Roasted", "Steamed", "Boiled", "Baked", "Tandoori",
+            "Seekh", "Kebab", "Reshmi", "Malai", "Afghani", "Achari", "Amritsari",
+            "Regular", "Medium", "Large", "Small", "Full", "Half", "Quarter", "Pcs"
+        ];
+
         // --- TOOLS CONFIGURATION ---
         const tools = {
             'jpg-to-pdf': { id: 'jpg-to-pdf', title: "JPG to PDF", desc: "Add multiple images to combine into a single PDF.", accept: "image/jpeg, image/png, image/jpg", handler: convertJpgToPdf, multiple: true },
@@ -163,7 +200,8 @@
             'compress-pdf': { id: 'compress-pdf', title: "Compress PDF", desc: "Reduce file size without losing readability.", accept: ".pdf", handler: compressPDF },
             'pdf-image-to-excel': { id: 'pdf-image-to-excel', title: "PDF/Image to Excel", desc: "Extract data to Excel.", accept: ".pdf, image/*", handler: convertPdfImageToExcel },
             'clean-excel': { id: 'clean-excel', title: "Clean Excel Sheet", desc: "Remove accents and special symbols.", accept: ".xlsx, .csv", handler: cleanExcelFile },
-            'duplicate-remover': { id: 'duplicate-remover', title: "Safe Duplicate Remover", desc: "Highlight or Remove duplicate rows safely.", accept: ".xlsx, .xls, .csv", handler: null }
+            'duplicate-remover': { id: 'duplicate-remover', title: "Safe Duplicate Remover", desc: "Highlight or Remove duplicate rows safely.", accept: ".xlsx, .xls, .csv", handler: null },
+            'menu-fixer': { id: 'menu-fixer', title: "Menu Menu Fixer", desc: "Auto-correct restaurant menu spellings (e.g. Utapam -> Uttapam).", accept: ".xlsx, .xls", handler: processMenuFixer }
         };
 
         function loadTool(id) {
@@ -171,12 +209,12 @@
             if(!currentTool) return;
             
             globalFileList = [];
-
             document.getElementById('menu-view').classList.add('hidden');
             document.getElementById('workspace-view').classList.remove('hidden');
             document.getElementById('tool-title').innerText = currentTool.title;
             document.getElementById('tool-desc').innerText = currentTool.desc;
             document.getElementById('file-formats').innerText = "Supports: " + currentTool.accept;
+            document.getElementById('success-details').innerText = "";
             
             const fileInput = document.getElementById('file-input');
             fileInput.accept = currentTool.accept;
@@ -270,59 +308,144 @@
         }
 
         // ==========================================
-        //    FIXED: COMPRESS PDF LOGIC
+        //    MENU FIXER LOGIC (Integrated)
+        // ==========================================
+        function normalizeMenuString(str) {
+            return str
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") 
+                .replace(/—/g, "-").replace(/–/g, "-") 
+                .replace(/["]/g, '').replace(/[']/g, '');
+        }
+
+        function getSimilarity(s1, s2) {
+            let longer = s1, shorter = s2;
+            if (s1.length < s2.length) { longer = s2; shorter = s1; }
+            let longerLength = longer.length;
+            if (longerLength === 0) return 1.0;
+            return (longerLength - editDistance(longer, shorter)) / parseFloat(longerLength);
+        }
+
+        function editDistance(s1, s2) {
+            s1 = s1.toLowerCase(); s2 = s2.toLowerCase();
+            let costs = new Array();
+            for (let i = 0; i <= s1.length; i++) {
+                let lastValue = i;
+                for (let j = 0; j <= s2.length; j++) {
+                    if (i == 0) costs[j] = j;
+                    else {
+                        if (j > 0) {
+                            let newValue = costs[j - 1];
+                            if (s1.charAt(i - 1) != s2.charAt(j - 1))
+                                newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+                            costs[j - 1] = lastValue;
+                            lastValue = newValue;
+                        }
+                    }
+                }
+                if (i > 0) costs[s2.length] = lastValue;
+            }
+            return costs[s2.length];
+        }
+
+        function solveWord(rawWord) {
+            let clean = normalizeMenuString(rawWord);
+            let lower = clean.toLowerCase();
+            if (forcedCorrections[lower]) return forcedCorrections[lower];
+            if (!isNaN(clean) || clean.length < 3) return clean;
+            for (let word of dictionary) {
+                if (word.toLowerCase() === lower) return word;
+            }
+            let bestMatch = clean;
+            let highestScore = 0;
+            for (let correct of dictionary) {
+                let score = getSimilarity(clean, correct);
+                if (score > highestScore) {
+                    highestScore = score;
+                    bestMatch = correct;
+                }
+            }
+            if (highestScore > 0.80) return bestMatch;
+            return clean;
+        }
+
+        async function processMenuFixer(files) {
+            const file = files[0];
+            const buffer = await file.arrayBuffer();
+            
+            // Use ExcelJS (Included in head)
+            const workbook = new ExcelJS.Workbook();
+            await workbook.xlsx.load(buffer);
+            const worksheet = workbook.worksheets[0];
+            let totalChanges = 0;
+
+            worksheet.eachRow((row) => {
+                row.eachCell((cell) => {
+                    if (cell.type === ExcelJS.ValueType.String || typeof cell.value === 'string') {
+                        let originalStr = cell.value.toString();
+                        let spacingFixed = originalStr.replace(/\s\s+/g, ' ').trim();
+                        let words = spacingFixed.split(' ');
+                        let richText = [];
+                        let hasChange = false;
+
+                        words.forEach((word, index) => {
+                            let fixed = solveWord(word);
+                            let space = (index < words.length - 1) ? ' ' : '';
+                            if (fixed !== word) {
+                                richText.push({ text: fixed + space, font: { bold: true, color: { argb: 'FFFF0000' }, name: 'Calibri' } });
+                                hasChange = true;
+                                totalChanges++;
+                            } else {
+                                richText.push({ text: fixed + space, font: { color: { argb: 'FF000000' }, name: 'Calibri' } });
+                            }
+                        });
+
+                        if (hasChange) {
+                            cell.value = { richText: richText };
+                        } else if (originalStr !== spacingFixed) {
+                            cell.value = spacingFixed;
+                        }
+                    }
+                });
+            });
+
+            const outBuffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([outBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+            
+            // UI Feedback for changes
+            document.getElementById('success-details').innerText = `Fixed ${totalChanges} typos!`;
+            setupDownload(blob, "Menu_Fixed.xlsx");
+        }
+
+        // ==========================================
+        //    EXISTING UTILITY TOOLS
         // ==========================================
         async function compressPDF(files) {
             const file = files[0];
             const data = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument(data).promise;
-            
-            // Create a new jsPDF instance
             const doc = new window.jspdf.jsPDF();
             
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
-                
-                // Get page dimensions at 1.0 scale
                 const viewport = page.getViewport({ scale: 1.0 });
                 const width = viewport.width;
                 const height = viewport.height;
-                
-                // Render page to canvas
                 const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
                 canvas.width = width;
                 canvas.height = height;
-                
                 await page.render({ canvasContext: context, viewport: viewport }).promise;
-                
-                // Convert to JPEG with 0.7 quality (Balanced compression)
                 const imgData = canvas.toDataURL('image/jpeg', 0.7);
-                
-                // If it's the first page, we use the default page. 
-                // For subsequent pages, we add a new page.
-                if (i > 1) {
-                    doc.addPage([width, height]);
-                } else {
-                    // Set first page size to match original PDF page
-                    doc.internal.pageSize.width = width;
-                    doc.internal.pageSize.height = height;
-                }
-                
-                // Add the compressed image to the PDF
+                if (i > 1) doc.addPage([width, height]);
+                else { doc.internal.pageSize.width = width; doc.internal.pageSize.height = height; }
                 doc.addImage(imgData, 'JPEG', 0, 0, width, height);
             }
-            
             setupDownload(doc.output('blob'), "compressed.pdf");
         }
 
-        // ==========================================
-        //    DUPLICATE REMOVER LOGIC
-        // ==========================================
         function handleDuplicateFile(file) {
             activeDupFileName = file.name.split('.')[0];
             const reader = new FileReader();
-            
             document.getElementById('drop-area').classList.add('hidden');
             document.getElementById('status-area').classList.remove('hidden');
             document.getElementById('loading-spinner').classList.remove('hidden');
@@ -332,11 +455,10 @@
                 const workbook = XLSX.read(data, { type: 'array' });
                 const firstSheet = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheet];
-                
-                rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                rawDupData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
                 document.getElementById('loading-spinner').classList.add('hidden');
                 
-                if(rawData.length > 0) {
+                if(rawDupData.length > 0) {
                     document.getElementById('dup-options-area').classList.remove('hidden');
                 } else {
                     document.getElementById('error-msg').innerText = "File is empty.";
@@ -347,30 +469,21 @@
         }
 
         function processDuplicateData(mode) {
-            if(!rawData || rawData.length === 0) return;
-
+            if(!rawDupData || rawDupData.length === 0) return;
             const criteria = document.querySelector('input[name="dup-criteria"]:checked').value;
             const seen = new Set();
             const duplicatesMap = new Map();
-
-            // Identify
-            rawData.forEach((row, index) => {
+            rawDupData.forEach((row, index) => {
                 let fingerprint = "";
-                if (criteria === 'col1') {
-                    fingerprint = row[0] ? String(row[0]).trim().toLowerCase() : ""; 
-                } else {
-                    fingerprint = JSON.stringify(row);
-                }
+                if (criteria === 'col1') fingerprint = row[0] ? String(row[0]).trim().toLowerCase() : ""; 
+                else fingerprint = JSON.stringify(row);
                 if (fingerprint === "") return; 
                 if (seen.has(fingerprint)) duplicatesMap.set(index, true);
                 else seen.add(fingerprint);
             });
-
-            // Rebuild
             const finalRows = [];
-            rawData.forEach((row, index) => {
+            rawDupData.forEach((row, index) => {
                 const isDuplicate = duplicatesMap.has(index);
-
                 if (mode === 'remove') {
                     if (!isDuplicate) finalRows.push(row);
                 } else {
@@ -385,8 +498,6 @@
                     finalRows.push(styledRow);
                 }
             });
-
-            // Download
             const ws = XLSX.utils.aoa_to_sheet(finalRows);
             const colWidths = finalRows[0] ? finalRows[0].map(() => ({ wch: 25 })) : [];
             ws['!cols'] = colWidths;
@@ -394,15 +505,11 @@
             XLSX.utils.book_append_sheet(wb, ws, "Processed_Data");
             const suffix = mode === 'remove' ? "_Cleaned" : "_Highlighted";
             XLSX.writeFile(wb, `${activeDupFileName}${suffix}.xlsx`);
-
             document.getElementById('dup-options-area').classList.add('hidden');
             document.getElementById('success-msg').classList.remove('hidden');
             document.getElementById('download-btn').style.display = 'none';
         }
 
-        // ==========================================
-        //    OTHER TOOLS
-        // ==========================================
         async function convertJpgToPdf(files) {
             const doc = new window.jspdf.jsPDF();
             let processedCount = 0;
